@@ -32,6 +32,18 @@ public enum ErrorCode {
             "접근 권한이 없습니다."
     ),
 
+    USER_NOT_FOUND(
+            HttpStatus.NOT_FOUND,
+            "USER_404_01",
+            "사용자를 찾을 수 없습니다."
+    ),
+
+    USER_ALREADY_EXISTS(
+            HttpStatus.CONFLICT,
+            "USER_409_01",
+            "이미 존재하는 사용자명입니다."
+    ),
+
     INTERNAL_SERVER_ERROR(
             HttpStatus.INTERNAL_SERVER_ERROR,
             "COMMON_500",
