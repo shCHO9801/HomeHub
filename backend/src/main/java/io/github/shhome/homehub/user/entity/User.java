@@ -54,4 +54,8 @@ public class User extends BaseTimeEntity {
     public void enable() {
         this.enabled = true;
     }
+
+    public void changePasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
 }
