@@ -17,3 +17,9 @@ server:
       cookie:
         http-only: true
         same-site: lax
+
+homehub:
+  synology:
+    base-url: ${SYNOLOGY_BASE_URL:http://localhost}
+    connect-timeout: ${SYNOLOGY_CONNECT_TIMEOUT:2s}
+    read-timeout: ${SYNOLOGY_READ_TIMEOUT:5s}
