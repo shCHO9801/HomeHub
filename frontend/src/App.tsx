@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import LoginPage from './auth/LoginPage'
 import {
   getCurrentUser,
@@ -6,41 +6,23 @@ import {
   logout,
 } from './auth/api'
 import type { CurrentUser } from './auth/api'
+import ServerMonitoringPanel from './monitoring/ServerMonitoringPanel'
+import { getServerStatus } from './monitoring/api'
+import type { ServerStatusResponse } from './monitoring/api'
 
-type ApiStatus = 'loading' | 'online' | 'offline'
-
-interface HealthResponse {
-  status: string
-}
-
-const statusContent: Record<
-  ApiStatus,
-  { label: string; description: string; containerClass: string; dotClass: string }
-> = {
-  loading: {
-    label: '서버 상태 확인 중',
-    description: '백엔드 응답을 기다리고 있습니다.',
-    containerClass: 'border-slate-200 bg-slate-50 text-slate-700',
-    dotClass: 'bg-slate-400',
-  },
-  online: {
-    label: 'API 온라인',
-    description: '백엔드와 데이터베이스가 응답하고 있습니다.',
-    containerClass: 'border-emerald-200 bg-emerald-50 text-emerald-900',
-    dotClass: 'bg-emerald-500',
-  },
-  offline: {
-    label: 'API 연결 실패',
-    description: '백엔드 실행 상태와 연결 주소를 확인하세요.',
-    containerClass: 'border-amber-200 bg-amber-50 text-amber-950',
-    dotClass: 'bg-amber-500',
-  },
-}
+const MONITORING_REFRESH_INTERVAL = 10_000
 
 function App() {
-  const [apiStatus, setApiStatus] = useState<ApiStatus>('loading')
   const [currentUser, setCurrentUser] =
     useState<CurrentUser | null | undefined>(undefined)
+  const [serverStatus, setServerStatus] =
+    useState<ServerStatusResponse | null>(null)
+  const [isMonitoringLoading, setIsMonitoringLoading] =
+    useState(true)
+  const [isMonitoringRefreshing, setIsMonitoringRefreshing] =
+    useState(false)
+  const [monitoringError, setMonitoringError] =
+    useState<string | null>(null)
 
   useEffect(() => {
     let active = true
@@ -66,50 +48,51 @@ function App() {
     }
   }, [])
 
+  const loadServerStatus = useCallback(
+    async (refreshing = false) => {
+      if (refreshing) {
+        setIsMonitoringRefreshing(true)
+      } else {
+        setIsMonitoringLoading(true)
+      }
+
+      try {
+        const status = await getServerStatus()
+
+        setServerStatus(status)
+        setMonitoringError(null)
+      } catch (error) {
+        setMonitoringError(
+          error instanceof Error
+            ? error.message
+            : '서버 상태를 불러오지 못했습니다.',
+        )
+      } finally {
+        setIsMonitoringLoading(false)
+        setIsMonitoringRefreshing(false)
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!currentUser) {
       return
     }
 
-    let active = true
-    const controller = new AbortController()
-    const timeoutId = window.setTimeout(() => controller.abort(), 5_000)
+    const initialLoadId = window.setTimeout(() => {
+      void loadServerStatus()
+    }, 0)
 
-    const checkHealth = async () => {
-      try {
-        const response = await fetch('/actuator/health', {
-          signal: controller.signal,
-        })
-
-        if (!response.ok) {
-          if (active) {
-            setApiStatus('offline')
-          }
-          return
-        }
-
-        const health = (await response.json()) as HealthResponse
-
-        if (active) {
-          setApiStatus(health.status === 'UP' ? 'online' : 'offline')
-        }
-      } catch {
-        if (active) {
-          setApiStatus('offline')
-        }
-      } finally {
-        window.clearTimeout(timeoutId)
-      }
-    }
-
-    void checkHealth()
+    const intervalId = window.setInterval(() => {
+      void loadServerStatus(true)
+    }, MONITORING_REFRESH_INTERVAL)
 
     return () => {
-      active = false
-      window.clearTimeout(timeoutId)
-      controller.abort()
+      window.clearTimeout(initialLoadId)
+      window.clearInterval(intervalId)
     }
-  }, [currentUser])
+  }, [currentUser, loadServerStatus])
 
   const handleLogin = async (
     username: string,
@@ -131,6 +114,9 @@ function App() {
   const handleLogout = async () => {
     await logout()
     setCurrentUser(null)
+    setServerStatus(null)
+    setMonitoringError(null)
+    setIsMonitoringLoading(true)
   }
 
   if (currentUser === undefined) {
@@ -145,12 +131,10 @@ function App() {
     return <LoginPage onLogin={handleLogin} />
   }
 
-  const status = statusContent[apiStatus]
-
   return (
-    <main className="grid min-h-screen place-items-center bg-slate-100 px-6 py-12 text-slate-950">
-      <section className="w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="border-b border-slate-200 px-8 py-7">
+    <main className="min-h-screen bg-slate-100 px-6 py-12 text-slate-950">
+      <div className="mx-auto w-full max-w-5xl space-y-6">
+        <section className="rounded-2xl border border-slate-200 bg-white px-8 py-7 shadow-sm">
           <p className="font-mono text-xs tracking-[0.16em] text-slate-500 uppercase">
             Local network · System check
           </p>
@@ -179,30 +163,16 @@ function App() {
               로그아웃
             </button>
           </div>
-        </div>
+        </section>
 
-        <div className="px-8 py-7">
-          <p className="text-xs font-semibold tracking-[0.14em] text-slate-500 uppercase">
-            Backend
-          </p>
-          <div
-            aria-live="polite"
-            className={`mt-3 flex items-start gap-3 rounded-xl border px-4 py-4 ${status.containerClass}`}
-            role="status"
-          >
-            <span
-              aria-hidden="true"
-              className={`mt-1.5 size-2.5 shrink-0 rounded-full ${status.dotClass}`}
-            />
-            <span>
-              <span className="block text-sm font-semibold">{status.label}</span>
-              <span className="mt-1 block text-sm opacity-75">
-                {status.description}
-              </span>
-            </span>
-          </div>
-        </div>
-      </section>
+        <ServerMonitoringPanel
+          errorMessage={monitoringError}
+          isLoading={isMonitoringLoading}
+          isRefreshing={isMonitoringRefreshing}
+          onRefresh={() => void loadServerStatus(true)}
+          serverStatus={serverStatus}
+        />
+      </div>
     </main>
   )
 }

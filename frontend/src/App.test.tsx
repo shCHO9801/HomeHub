@@ -14,6 +14,26 @@ const csrfToken = {
   token: 'csrf-token',
 }
 
+const serverStatus = {
+  status: 'ONLINE',
+  cpuUsagePercent: 12.5,
+  logicalProcessorCount: 8,
+  memory: {
+    totalBytes: 16_000,
+    usedBytes: 8_000,
+    availableBytes: 8_000,
+    usagePercent: 50,
+  },
+  disk: {
+    totalBytes: 100_000,
+    usedBytes: 40_000,
+    availableBytes: 60_000,
+    usagePercent: 40,
+  },
+  uptimeSeconds: 90_061,
+  collectedAt: '2026-11-12T17:00:00+09:00',
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -91,7 +111,7 @@ describe('App 인증 흐름', () => {
           return emptyResponse()
         }
 
-        return jsonResponse({ status: 'UP' })
+        return jsonResponse(serverStatus)
       })
 
     render(<App />)
@@ -180,7 +200,7 @@ describe('App 인증 흐름', () => {
           return emptyResponse()
         }
 
-        return jsonResponse({ status: 'UP' })
+        return jsonResponse(serverStatus)
       })
 
     render(<App />)
@@ -210,14 +230,14 @@ describe('App 서버 상태', () => {
       async (input) => {
         return String(input) === '/api/auth/me'
           ? jsonResponse(currentUser)
-          : jsonResponse({ status: 'UP' })
+          : jsonResponse(serverStatus)
       },
     )
 
     render(<App />)
 
     expect(
-      await screen.findByText('API 온라인'),
+      await screen.findByText('서버 온라인'),
     ).toBeInTheDocument()
   })
 
@@ -235,7 +255,9 @@ describe('App 서버 상태', () => {
     render(<App />)
 
     expect(
-      await screen.findByText('API 연결 실패'),
+      await screen.findByText(
+        '서버 모니터링 정보를 불러오지 못했습니다.',
+      ),
     ).toBeInTheDocument()
   })
 })
