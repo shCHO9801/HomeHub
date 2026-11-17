@@ -1,13 +1,21 @@
 package io.github.shhome.homehub.monitoring;
 
+import io.github.shhome.homehub.monitoring.dto.ResourceUsageResponse;
+import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
+import io.github.shhome.homehub.monitoring.service.MonitoringService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.OffsetDateTime;
+
+import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -20,6 +28,9 @@ class MonitoringIntegrationTest {
     @Autowired
     private MockMvc mockMvc;
 
+    @MockitoBean
+    private MonitoringService monitoringService;
+
     @Test
     @WithMockUser(
             username = "test-member",
@@ -27,6 +38,9 @@ class MonitoringIntegrationTest {
     )
     @DisplayName("인증된 사용자는 현재 서버 상태를 조회한다")
     void authenticatedUserGetsServerStatus() throws Exception {
+        when(monitoringService.getServerStatus())
+                .thenReturn(onlineResponse());
+
         mockMvc.perform(get("/api/monitoring/server"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ONLINE"))
@@ -64,5 +78,29 @@ class MonitoringIntegrationTest {
                 .andExpect(jsonPath("$.status").value(401))
                 .andExpect(jsonPath("$.code")
                         .value("AUTH_401_02"));
+    }
+
+    private ServerStatusResponse onlineResponse() {
+        return new ServerStatusResponse(
+                ONLINE,
+                12.35,
+                8,
+                new ResourceUsageResponse(
+                        1_000L,
+                        600L,
+                        400L,
+                        60.0
+                ),
+                new ResourceUsageResponse(
+                        2_000L,
+                        1_500L,
+                        500L,
+                        75.0
+                ),
+                3_600L,
+                OffsetDateTime.parse(
+                        "2026-11-17T17:00:00+09:00"
+                )
+        );
     }
 }
