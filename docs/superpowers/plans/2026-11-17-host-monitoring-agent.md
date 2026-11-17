@@ -62,6 +62,7 @@
 
 **Files:**
 - Create: `agent/build.gradle`
+- Create: `agent/.gitignore`
 - Create: `agent/settings.gradle`
 - Create: `agent/gradlew`
 - Create: `agent/gradlew.bat`
