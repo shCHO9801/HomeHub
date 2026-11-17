@@ -75,12 +75,12 @@ Authorization: Bearer <AGENT_TOKEN>
 - `status`: `ONLINE` 또는 `UNKNOWN`
 - `cpuUsagePercent`
 - `logicalProcessorCount`
-- `memoryUsage`
-- `diskUsage`
+- `memory`
+- `disk`
 - `uptimeSeconds`
-- `checkedAt`
+- `collectedAt`
 
-`memoryUsage`와 `diskUsage`는 전체 바이트, 사용 바이트, 가용 바이트, 사용률을 포함한다.
+`memory`와 `disk`는 전체 바이트, 사용 바이트, 가용 바이트, 사용률을 포함한다.
 
 ## 데이터 흐름
 
