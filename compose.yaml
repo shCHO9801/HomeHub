@@ -29,12 +29,18 @@ services:
       MARIADB_DATABASE: ${MARIADB_DATABASE}
       MARIADB_USER: ${MARIADB_USER}
       MARIADB_PASSWORD: ${MARIADB_PASSWORD}
+      HOST_AGENT_BASE_URL: ${HOST_AGENT_BASE_URL:-http://host.docker.internal:9101}
+      HOST_AGENT_TOKEN: ${HOST_AGENT_TOKEN:-}
+      HOST_AGENT_CONNECT_TIMEOUT: ${HOST_AGENT_CONNECT_TIMEOUT:-2s}
+      HOST_AGENT_READ_TIMEOUT: ${HOST_AGENT_READ_TIMEOUT:-3s}
       SYNOLOGY_BASE_URL: ${SYNOLOGY_BASE_URL}
       SYNOLOGY_CONNECT_TIMEOUT: ${SYNOLOGY_CONNECT_TIMEOUT:-2s}
       SYNOLOGY_READ_TIMEOUT: ${SYNOLOGY_READ_TIMEOUT:-5s}
     depends_on:
       db:
         condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     restart: unless-stopped
 
   frontend:
