@@ -19,6 +19,11 @@ server:
         same-site: lax
 
 homehub:
+  host-agent:
+    base-url: ${HOST_AGENT_BASE_URL:http://localhost:9101}
+    token: ${HOST_AGENT_TOKEN:}
+    connect-timeout: ${HOST_AGENT_CONNECT_TIMEOUT:2s}
+    read-timeout: ${HOST_AGENT_READ_TIMEOUT:3s}
   synology:
     base-url: ${SYNOLOGY_BASE_URL:http://localhost}
     connect-timeout: ${SYNOLOGY_CONNECT_TIMEOUT:2s}

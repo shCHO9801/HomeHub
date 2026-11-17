@@ -1,0 +1,11 @@
+spring:
+  application:
+    name: homehub-agent
+
+server:
+  address: ${AGENT_BIND_ADDRESS:127.0.0.1}
+  port: ${AGENT_PORT:9101}
+
+homehub:
+  agent:
+    token: ${AGENT_TOKEN}
