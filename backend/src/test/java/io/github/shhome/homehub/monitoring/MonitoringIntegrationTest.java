@@ -1,6 +1,7 @@
 package io.github.shhome.homehub.monitoring;
 
 import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
+import io.github.shhome.homehub.monitoring.dto.PortStatusResponse;
 import io.github.shhome.homehub.monitoring.dto.ResourceUsageResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import io.github.shhome.homehub.monitoring.service.MonitoringService;
@@ -17,6 +18,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import static io.github.shhome.homehub.monitoring.dto.DockerContainerState.RUNNING;
+import static io.github.shhome.homehub.monitoring.dto.PortExposure.ALL_INTERFACES;
+import static io.github.shhome.homehub.monitoring.dto.PortProtocol.TCP;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -122,6 +125,45 @@ class MonitoringIntegrationTest {
         mockMvc.perform(
                         get("/api/monitoring/docker/containers")
                 )
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code")
+                        .value("AUTH_401_02"));
+    }
+
+    @Test
+    @WithMockUser(
+            username = "test-member",
+            roles = "MEMBER"
+    )
+    @DisplayName("인증된 사용자는 사용 중인 포트를 조회한다")
+    void authenticatedUserGetsPorts() throws Exception {
+        when(monitoringService.getPorts())
+                .thenReturn(List.of(
+                        new PortStatusResponse(
+                                TCP,
+                                8080,
+                                "0.0.0.0",
+                                ALL_INTERFACES,
+                                "docker-proxy"
+                        )
+                ));
+
+        mockMvc.perform(get("/api/monitoring/ports"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].protocol")
+                        .value("TCP"))
+                .andExpect(jsonPath("$[0].port")
+                        .value(8080))
+                .andExpect(jsonPath("$[0].exposure")
+                        .value("ALL_INTERFACES"))
+                .andExpect(jsonPath("$[0].processName")
+                        .value("docker-proxy"));
+    }
+
+    @Test
+    @DisplayName("인증되지 않은 사용자는 포트를 조회할 수 없다")
+    void unauthenticatedUserCannotGetPorts() throws Exception {
+        mockMvc.perform(get("/api/monitoring/ports"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code")
                         .value("AUTH_401_02"));

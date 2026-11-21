@@ -12,3 +12,6 @@ homehub:
   docker:
     status-command: ${DOCKER_STATUS_COMMAND:/usr/local/libexec/homehub-docker-status}
     command-timeout: ${DOCKER_COMMAND_TIMEOUT:3s}
+  port:
+    status-command: ${PORT_STATUS_COMMAND:/usr/local/libexec/homehub-port-status}
+    command-timeout: ${PORT_COMMAND_TIMEOUT:3s}

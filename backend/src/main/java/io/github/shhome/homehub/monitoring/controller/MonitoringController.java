@@ -1,6 +1,7 @@
 package io.github.shhome.homehub.monitoring.controller;
 
 import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
+import io.github.shhome.homehub.monitoring.dto.PortStatusResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import io.github.shhome.homehub.monitoring.service.MonitoringService;
 import lombok.RequiredArgsConstructor;
@@ -28,5 +29,12 @@ public class MonitoringController {
     public ResponseEntity<List<DockerContainerResponse>> getDockerContainers() {
         return ResponseEntity
                 .ok(monitoringService.getDockerContainers());
+    }
+
+    @GetMapping("/ports")
+    public ResponseEntity<List<PortStatusResponse>> getPorts() {
+        return ResponseEntity.ok(
+                monitoringService.getPorts()
+        );
     }
 }

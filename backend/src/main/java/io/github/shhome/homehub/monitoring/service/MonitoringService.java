@@ -2,6 +2,7 @@ package io.github.shhome.homehub.monitoring.service;
 
 import io.github.shhome.homehub.monitoring.client.HostAgentClient;
 import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
+import io.github.shhome.homehub.monitoring.dto.PortStatusResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,5 +43,9 @@ public class MonitoringService {
 
     public List<DockerContainerResponse> getDockerContainers() {
         return hostAgentClient.getContainers();
+    }
+
+    public List<PortStatusResponse> getPorts() {
+        return hostAgentClient.getPorts();
     }
 }
