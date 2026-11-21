@@ -1,10 +1,13 @@
 package io.github.shhome.homehub.monitoring.client;
 
+import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.util.List;
 import java.util.Objects;
 
 @Component
@@ -29,6 +32,24 @@ public class HostAgentClient {
         return Objects.requireNonNull(
                 response,
                 "Host Agent 응답 본문이 없습니다."
+        );
+    }
+
+    public List<DockerContainerResponse> getContainers() {
+        List<DockerContainerResponse> response = restClient
+                .get()
+                .uri("/api/agent/docker/containers")
+                .retrieve()
+                .body(
+                        new ParameterizedTypeReference<
+                                List<DockerContainerResponse>
+                        >() {
+                        }
+                );
+
+        return Objects.requireNonNull(
+                response,
+                "Host Agent 컨테이너 응답 본문이 없습니다."
         );
     }
 }

@@ -1,6 +1,7 @@
 package io.github.shhome.homehub.monitoring.service;
 
 import io.github.shhome.homehub.monitoring.client.HostAgentClient;
+import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
 import io.github.shhome.homehub.monitoring.dto.ResourceUsageResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -12,7 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.client.RestClientException;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
+import static io.github.shhome.homehub.monitoring.dto.DockerContainerState.RUNNING;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.UNKNOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -60,6 +63,30 @@ class MonitoringServiceTest {
         assertNull(response.disk());
         assertNull(response.uptimeSeconds());
         assertNotNull(response.collectedAt());
+    }
+
+    @Test
+    @DisplayName("Host Agent 컨테이너 목록을 그대로 반환한다")
+    void returnsHostAgentContainers() {
+        List<DockerContainerResponse> expected = List.of(
+                new DockerContainerResponse(
+                        "abc123",
+                        "homehub-backend",
+                        "homehub-backend:latest",
+                        RUNNING,
+                        "Up 2 hours (healthy)",
+                        "127.0.0.1:8080->8080/tcp",
+                        "homehub"
+                )
+        );
+
+        when(hostAgentClient.getContainers())
+                .thenReturn(expected);
+
+        List<DockerContainerResponse> response =
+                monitoringService.getDockerContainers();
+
+        assertEquals(expected, response);
     }
 
     private ServerStatusResponse onlineResponse() {

@@ -1,6 +1,7 @@
 package io.github.shhome.homehub.monitoring.client;
 
 import com.sun.net.httpserver.HttpServer;
+import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -11,8 +12,10 @@ import org.springframework.web.client.RestClient;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static io.github.shhome.homehub.monitoring.dto.DockerContainerState.RUNNING;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -83,6 +86,66 @@ class HostAgentClientTest {
         assertEquals(600L, response.memory().usedBytes());
         assertEquals(1_500L, response.disk().usedBytes());
         assertEquals(3_600L, response.uptimeSeconds());
+    }
+
+    @Test
+    @DisplayName("Agent 컨테이너 목록을 읽는다")
+    void readsDockerContainers() throws IOException {
+        server = HttpServer.create(
+                new InetSocketAddress(0),
+                0
+        );
+
+        server.createContext(
+                "/api/agent/docker/containers",
+                exchange -> {
+                    byte[] body = """
+                        [
+                          {
+                            "id": "abc123",
+                            "name": "homehub-backend",
+                            "image": "homehub-backend:latest",
+                            "state": "RUNNING",
+                            "statusDetail": "Up 2 hours (healthy)",
+                            "ports": "127.0.0.1:8080->8080/tcp",
+                            "composeProject": "homehub"
+                          }
+                        ]
+                        """.getBytes(StandardCharsets.UTF_8);
+
+                    exchange.getResponseHeaders().set(
+                            HttpHeaders.CONTENT_TYPE,
+                            "application/json"
+                    );
+
+                    exchange.sendResponseHeaders(200, body.length);
+                    exchange.getResponseBody().write(body);
+                    exchange.close();
+                }
+        );
+
+        server.start();
+
+        RestClient restClient = RestClient.builder()
+                .baseUrl(
+                        "http://127.0.0.1:"
+                                + server.getAddress().getPort()
+                )
+                .build();
+
+        HostAgentClient client =
+                new HostAgentClient(restClient);
+
+        List<DockerContainerResponse> response =
+                client.getContainers();
+
+        assertEquals(1, response.size());
+        assertEquals("homehub-backend", response.getFirst().name());
+        assertEquals(RUNNING, response.getFirst().state());
+        assertEquals(
+                "127.0.0.1:8080->8080/tcp",
+                response.getFirst().ports()
+        );
     }
 
     private String responseBody() {

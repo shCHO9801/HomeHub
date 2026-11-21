@@ -1,5 +1,6 @@
 package io.github.shhome.homehub.monitoring;
 
+import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
 import io.github.shhome.homehub.monitoring.dto.ResourceUsageResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import io.github.shhome.homehub.monitoring.service.MonitoringService;
@@ -13,7 +14,9 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
+import static io.github.shhome.homehub.monitoring.dto.DockerContainerState.RUNNING;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -76,6 +79,50 @@ class MonitoringIntegrationTest {
         mockMvc.perform(get("/api/monitoring/server"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.status").value(401))
+                .andExpect(jsonPath("$.code")
+                        .value("AUTH_401_02"));
+    }
+
+    @Test
+    @WithMockUser(
+            username = "test-member",
+            roles = "MEMBER"
+    )
+    @DisplayName("인증된 사용자는 Docker 컨테이너 목록을 조회한다")
+    void authenticatedUserGetsDockerContainers() throws Exception {
+        when(monitoringService.getDockerContainers())
+                .thenReturn(List.of(
+                        new DockerContainerResponse(
+                                "abc123",
+                                "homehub-backend",
+                                "homehub-backend:latest",
+                                RUNNING,
+                                "Up 2 hours (healthy)",
+                                "127.0.0.1:8080->8080/tcp",
+                                "homehub"
+                        )
+                ));
+
+        mockMvc.perform(
+                        get("/api/monitoring/docker/containers")
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name")
+                        .value("homehub-backend"))
+                .andExpect(jsonPath("$[0].state")
+                        .value("RUNNING"))
+                .andExpect(jsonPath("$[0].ports")
+                        .value("127.0.0.1:8080->8080/tcp"));
+    }
+
+    @Test
+    @DisplayName("인증되지 않은 사용자는 Docker 컨테이너 목록을 조회할 수 없다")
+    void unauthenticatedUserCannotGetDockerContainers()
+            throws Exception {
+        mockMvc.perform(
+                        get("/api/monitoring/docker/containers")
+                )
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code")
                         .value("AUTH_401_02"));
     }

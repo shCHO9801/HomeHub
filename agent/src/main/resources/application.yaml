@@ -9,3 +9,6 @@ server:
 homehub:
   agent:
     token: ${AGENT_TOKEN}
+  docker:
+    status-command: ${DOCKER_STATUS_COMMAND:/usr/local/libexec/homehub-docker-status}
+    command-timeout: ${DOCKER_COMMAND_TIMEOUT:3s}
