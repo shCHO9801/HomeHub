@@ -1,0 +1,1 @@
+homehub-agent ALL=(root) NOPASSWD: /usr/bin/docker container ls --all --no-trunc --format *

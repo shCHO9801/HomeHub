@@ -6,9 +6,16 @@ import {
   logout,
 } from './auth/api'
 import type { CurrentUser } from './auth/api'
+import DockerContainerPanel from './monitoring/DockerContainerPanel'
 import ServerMonitoringPanel from './monitoring/ServerMonitoringPanel'
-import { getServerStatus } from './monitoring/api'
-import type { ServerStatusResponse } from './monitoring/api'
+import {
+  getDockerContainers,
+  getServerStatus,
+} from './monitoring/api'
+import type {
+  DockerContainerResponse,
+  ServerStatusResponse,
+} from './monitoring/api'
 
 const MONITORING_REFRESH_INTERVAL = 10_000
 
@@ -22,6 +29,12 @@ function App() {
   const [isMonitoringRefreshing, setIsMonitoringRefreshing] =
     useState(false)
   const [monitoringError, setMonitoringError] =
+    useState<string | null>(null)
+  const [dockerContainers, setDockerContainers] =
+    useState<DockerContainerResponse[]>([])
+  const [isDockerLoading, setIsDockerLoading] =
+    useState(true)
+  const [dockerError, setDockerError] =
     useState<string | null>(null)
 
   useEffect(() => {
@@ -75,6 +88,30 @@ function App() {
     [],
   )
 
+  const loadDockerContainers = useCallback(
+    async (showLoading = false) => {
+      if (showLoading) {
+        setIsDockerLoading(true)
+      }
+
+      try {
+        const containers = await getDockerContainers()
+
+        setDockerContainers(containers)
+        setDockerError(null)
+      } catch (error) {
+        setDockerError(
+          error instanceof Error
+            ? error.message
+            : 'Docker 컨테이너 정보를 불러오지 못했습니다.',
+        )
+      } finally {
+        setIsDockerLoading(false)
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!currentUser) {
       return
@@ -82,17 +119,19 @@ function App() {
 
     const initialLoadId = window.setTimeout(() => {
       void loadServerStatus()
+      void loadDockerContainers(true)
     }, 0)
 
     const intervalId = window.setInterval(() => {
       void loadServerStatus(true)
+      void loadDockerContainers()
     }, MONITORING_REFRESH_INTERVAL)
 
     return () => {
       window.clearTimeout(initialLoadId)
       window.clearInterval(intervalId)
     }
-  }, [currentUser, loadServerStatus])
+  }, [currentUser, loadDockerContainers, loadServerStatus])
 
   const handleLogin = async (
     username: string,
@@ -117,6 +156,9 @@ function App() {
     setServerStatus(null)
     setMonitoringError(null)
     setIsMonitoringLoading(true)
+    setDockerContainers([])
+    setDockerError(null)
+    setIsDockerLoading(true)
   }
 
   if (currentUser === undefined) {
@@ -169,8 +211,17 @@ function App() {
           errorMessage={monitoringError}
           isLoading={isMonitoringLoading}
           isRefreshing={isMonitoringRefreshing}
-          onRefresh={() => void loadServerStatus(true)}
+          onRefresh={() => {
+            void loadServerStatus(true)
+            void loadDockerContainers()
+          }}
           serverStatus={serverStatus}
+        />
+
+        <DockerContainerPanel
+          containers={dockerContainers}
+          errorMessage={dockerError}
+          isLoading={isDockerLoading}
         />
       </div>
     </main>

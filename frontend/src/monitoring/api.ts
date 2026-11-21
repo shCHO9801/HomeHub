@@ -17,6 +17,45 @@ export type ServerStatusResponse = {
     collectedAt: string
 }
 
+export type DockerContainerState =
+    | 'RUNNING'
+    | 'STOPPED'
+    | 'UNHEALTHY'
+    | 'UNKNOWN'
+
+export type DockerContainerResponse = {
+    id: string
+    name: string
+    image: string
+    state: DockerContainerState
+    statusDetail: string
+    ports: string
+    composeProject: string
+}
+
+export async function getDockerContainers(): Promise<
+    DockerContainerResponse[]
+> {
+    try {
+        const response = await fetch(
+            '/api/monitoring/docker/containers',
+            {
+                credentials: 'include',
+            },
+        )
+
+        if (!response.ok) {
+            throw new Error()
+        }
+
+        return (await response.json()) as DockerContainerResponse[]
+    } catch {
+        throw new Error(
+            'Docker 컨테이너 정보를 불러오지 못했습니다.',
+        )
+    }
+}
+
 export async function getServerStatus(): Promise<ServerStatusResponse> {
     try {
         const response = await fetch('/api/monitoring/server', {

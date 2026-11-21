@@ -34,6 +34,18 @@ const serverStatus = {
   collectedAt: '2026-11-12T17:00:00+09:00',
 }
 
+const dockerContainers = [
+  {
+    id: 'abc123',
+    name: 'homehub-backend',
+    image: 'homehub-backend:latest',
+    state: 'RUNNING',
+    statusDetail: 'Up 2 hours (healthy)',
+    ports: '127.0.0.1:8080->8080/tcp',
+    composeProject: 'homehub',
+  },
+]
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -109,6 +121,10 @@ describe('App 인증 흐름', () => {
 
         if (url === '/api/auth/login') {
           return emptyResponse()
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
         }
 
         return jsonResponse(serverStatus)
@@ -200,6 +216,10 @@ describe('App 인증 흐름', () => {
           return emptyResponse()
         }
 
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
         return jsonResponse(serverStatus)
       })
 
@@ -228,9 +248,17 @@ describe('App 서버 상태', () => {
   it('인증된 사용자에게 백엔드 온라인 상태를 표시한다', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(
       async (input) => {
-        return String(input) === '/api/auth/me'
-          ? jsonResponse(currentUser)
-          : jsonResponse(serverStatus)
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        return jsonResponse(serverStatus)
       },
     )
 
@@ -259,5 +287,66 @@ describe('App 서버 상태', () => {
         '서버 모니터링 정보를 불러오지 못했습니다.',
       ),
     ).toBeInTheDocument()
+  })
+})
+
+describe('App Docker 모니터링', () => {
+  it('인증된 사용자에게 Docker 컨테이너 목록을 표시한다', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        return jsonResponse(serverStatus)
+      })
+
+    render(<App />)
+
+    expect(
+      await screen.findByText('homehub-backend'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('127.0.0.1:8080->8080/tcp'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('실행 중')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/monitoring/docker/containers',
+      { credentials: 'include' },
+    )
+  })
+
+  it('Docker 컨테이너 요청 실패를 서버 상태와 구분해 표시한다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse({}, 500)
+        }
+
+        return jsonResponse(serverStatus)
+      },
+    )
+
+    render(<App />)
+
+    expect(
+      await screen.findByText(
+        'Docker 컨테이너 정보를 불러오지 못했습니다.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('서버 온라인')).toBeInTheDocument()
   })
 })

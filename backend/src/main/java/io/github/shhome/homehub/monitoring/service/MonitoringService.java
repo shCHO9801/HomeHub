@@ -1,12 +1,14 @@
 package io.github.shhome.homehub.monitoring.service;
 
 import io.github.shhome.homehub.monitoring.client.HostAgentClient;
+import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.UNKNOWN;
 
@@ -38,4 +40,7 @@ public class MonitoringService {
         }
     }
 
+    public List<DockerContainerResponse> getDockerContainers() {
+        return hostAgentClient.getContainers();
+    }
 }
