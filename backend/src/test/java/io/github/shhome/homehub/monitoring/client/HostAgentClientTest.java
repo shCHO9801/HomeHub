@@ -2,6 +2,7 @@ package io.github.shhome.homehub.monitoring.client;
 
 import com.sun.net.httpserver.HttpServer;
 import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
+import io.github.shhome.homehub.monitoring.dto.PortStatusResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,8 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static io.github.shhome.homehub.monitoring.dto.DockerContainerState.RUNNING;
+import static io.github.shhome.homehub.monitoring.dto.PortExposure.LOOPBACK;
+import static io.github.shhome.homehub.monitoring.dto.PortProtocol.TCP;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
@@ -145,6 +148,61 @@ class HostAgentClientTest {
         assertEquals(
                 "127.0.0.1:8080->8080/tcp",
                 response.getFirst().ports()
+        );
+    }
+
+    @Test
+    @DisplayName("Agent 포트 목록을 읽는다")
+    void readsPorts() throws IOException {
+        server = HttpServer.create(
+                new InetSocketAddress(0),
+                0
+        );
+
+        server.createContext("/api/agent/ports", exchange -> {
+            byte[] body = """
+                    [
+                      {
+                        "protocol": "TCP",
+                        "port": 8100,
+                        "bindAddress": "127.0.0.1",
+                        "exposure": "LOOPBACK",
+                        "processName": "docker-proxy"
+                      }
+                    ]
+                    """.getBytes(StandardCharsets.UTF_8);
+
+            exchange.getResponseHeaders().set(
+                    HttpHeaders.CONTENT_TYPE,
+                    "application/json"
+            );
+            exchange.sendResponseHeaders(200, body.length);
+            exchange.getResponseBody().write(body);
+            exchange.close();
+        });
+
+        server.start();
+
+        RestClient restClient = RestClient.builder()
+                .baseUrl(
+                        "http://127.0.0.1:"
+                                + server.getAddress().getPort()
+                )
+                .build();
+
+        HostAgentClient client =
+                new HostAgentClient(restClient);
+
+        List<PortStatusResponse> response =
+                client.getPorts();
+
+        assertEquals(1, response.size());
+        assertEquals(TCP, response.getFirst().protocol());
+        assertEquals(8100, response.getFirst().port());
+        assertEquals(LOOPBACK, response.getFirst().exposure());
+        assertEquals(
+                "docker-proxy",
+                response.getFirst().processName()
         );
     }
 

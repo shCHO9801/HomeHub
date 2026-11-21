@@ -2,6 +2,7 @@ package io.github.shhome.homehub.monitoring.service;
 
 import io.github.shhome.homehub.monitoring.client.HostAgentClient;
 import io.github.shhome.homehub.monitoring.dto.DockerContainerResponse;
+import io.github.shhome.homehub.monitoring.dto.PortStatusResponse;
 import io.github.shhome.homehub.monitoring.dto.ResourceUsageResponse;
 import io.github.shhome.homehub.monitoring.dto.ServerStatusResponse;
 import org.junit.jupiter.api.DisplayName;
@@ -16,6 +17,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 
 import static io.github.shhome.homehub.monitoring.dto.DockerContainerState.RUNNING;
+import static io.github.shhome.homehub.monitoring.dto.PortExposure.LOOPBACK;
+import static io.github.shhome.homehub.monitoring.dto.PortProtocol.TCP;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.ONLINE;
 import static io.github.shhome.homehub.monitoring.dto.ServerStatus.UNKNOWN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -85,6 +88,28 @@ class MonitoringServiceTest {
 
         List<DockerContainerResponse> response =
                 monitoringService.getDockerContainers();
+
+        assertEquals(expected, response);
+    }
+
+    @Test
+    @DisplayName("Host Agent 포트 목록을 그대로 반환한다")
+    void returnsHostAgentPorts() {
+        List<PortStatusResponse> expected = List.of(
+                new PortStatusResponse(
+                        TCP,
+                        8100,
+                        "127.0.0.1",
+                        LOOPBACK,
+                        "docker-proxy"
+                )
+        );
+
+        when(hostAgentClient.getPorts())
+                .thenReturn(expected);
+
+        List<PortStatusResponse> response =
+                monitoringService.getPorts();
 
         assertEquals(expected, response);
     }

@@ -46,6 +46,23 @@ const dockerContainers = [
   },
 ]
 
+const ports = [
+  {
+    protocol: 'TCP',
+    port: 22,
+    bindAddress: '0.0.0.0',
+    exposure: 'ALL_INTERFACES',
+    processName: 'sshd',
+  },
+  {
+    protocol: 'TCP',
+    port: 8100,
+    bindAddress: '127.0.0.1',
+    exposure: 'LOOPBACK',
+    processName: 'docker-proxy',
+  },
+]
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -125,6 +142,10 @@ describe('App 인증 흐름', () => {
 
         if (url === '/api/monitoring/docker/containers') {
           return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
         }
 
         return jsonResponse(serverStatus)
@@ -220,6 +241,10 @@ describe('App 인증 흐름', () => {
           return jsonResponse(dockerContainers)
         }
 
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
         return jsonResponse(serverStatus)
       })
 
@@ -256,6 +281,10 @@ describe('App 서버 상태', () => {
 
         if (url === '/api/monitoring/docker/containers') {
           return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
         }
 
         return jsonResponse(serverStatus)
@@ -305,6 +334,10 @@ describe('App Docker 모니터링', () => {
           return jsonResponse(dockerContainers)
         }
 
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
         return jsonResponse(serverStatus)
       })
 
@@ -336,6 +369,10 @@ describe('App Docker 모니터링', () => {
           return jsonResponse({}, 500)
         }
 
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
         return jsonResponse(serverStatus)
       },
     )
@@ -345,6 +382,110 @@ describe('App Docker 모니터링', () => {
     expect(
       await screen.findByText(
         'Docker 컨테이너 정보를 불러오지 못했습니다.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('서버 온라인')).toBeInTheDocument()
+  })
+})
+
+describe('App 포트 현황', () => {
+  it('인증된 사용자에게 사용 중인 포트를 표시한다', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      })
+
+    render(<App />)
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '사용 중인 포트',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText('sshd'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('docker-proxy')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/monitoring/ports',
+      { credentials: 'include' },
+    )
+  })
+
+  it('공개 범위 필터로 포트 목록을 좁힌다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      },
+    )
+
+    render(<App />)
+
+    await screen.findByText('sshd')
+
+    fireEvent.click(
+      screen.getByRole('button', { name: '로컬 전용' }),
+    )
+
+    expect(screen.queryByText('sshd')).not.toBeInTheDocument()
+    expect(screen.getByText('docker-proxy')).toBeInTheDocument()
+  })
+
+  it('포트 요청 실패를 다른 모니터링 정보와 구분해 표시한다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse({}, 500)
+        }
+
+        return jsonResponse(serverStatus)
+      },
+    )
+
+    render(<App />)
+
+    expect(
+      await screen.findByText(
+        '사용 중인 포트 정보를 불러오지 못했습니다.',
       ),
     ).toBeInTheDocument()
     expect(screen.getByText('서버 온라인')).toBeInTheDocument()

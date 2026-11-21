@@ -33,6 +33,39 @@ export type DockerContainerResponse = {
     composeProject: string
 }
 
+export type PortProtocol = 'TCP' | 'UDP'
+
+export type PortExposure =
+    | 'LOOPBACK'
+    | 'ALL_INTERFACES'
+    | 'SPECIFIC_INTERFACE'
+
+export type PortStatusResponse = {
+    protocol: PortProtocol
+    port: number
+    bindAddress: string
+    exposure: PortExposure
+    processName: string | null
+}
+
+export async function getPorts(): Promise<PortStatusResponse[]> {
+    try {
+        const response = await fetch('/api/monitoring/ports', {
+            credentials: 'include',
+        })
+
+        if (!response.ok) {
+            throw new Error()
+        }
+
+        return (await response.json()) as PortStatusResponse[]
+    } catch {
+        throw new Error(
+            '사용 중인 포트 정보를 불러오지 못했습니다.',
+        )
+    }
+}
+
 export async function getDockerContainers(): Promise<
     DockerContainerResponse[]
 > {

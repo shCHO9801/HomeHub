@@ -7,13 +7,16 @@ import {
 } from './auth/api'
 import type { CurrentUser } from './auth/api'
 import DockerContainerPanel from './monitoring/DockerContainerPanel'
+import PortInventoryPanel from './monitoring/PortInventoryPanel'
 import ServerMonitoringPanel from './monitoring/ServerMonitoringPanel'
 import {
   getDockerContainers,
+  getPorts,
   getServerStatus,
 } from './monitoring/api'
 import type {
   DockerContainerResponse,
+  PortStatusResponse,
   ServerStatusResponse,
 } from './monitoring/api'
 
@@ -35,6 +38,12 @@ function App() {
   const [isDockerLoading, setIsDockerLoading] =
     useState(true)
   const [dockerError, setDockerError] =
+    useState<string | null>(null)
+  const [ports, setPorts] =
+    useState<PortStatusResponse[]>([])
+  const [isPortLoading, setIsPortLoading] =
+    useState(true)
+  const [portError, setPortError] =
     useState<string | null>(null)
 
   useEffect(() => {
@@ -112,6 +121,30 @@ function App() {
     [],
   )
 
+  const loadPorts = useCallback(
+    async (showLoading = false) => {
+      if (showLoading) {
+        setIsPortLoading(true)
+      }
+
+      try {
+        const portStatuses = await getPorts()
+
+        setPorts(portStatuses)
+        setPortError(null)
+      } catch (error) {
+        setPortError(
+          error instanceof Error
+            ? error.message
+            : '사용 중인 포트 정보를 불러오지 못했습니다.',
+        )
+      } finally {
+        setIsPortLoading(false)
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
     if (!currentUser) {
       return
@@ -120,18 +153,25 @@ function App() {
     const initialLoadId = window.setTimeout(() => {
       void loadServerStatus()
       void loadDockerContainers(true)
+      void loadPorts(true)
     }, 0)
 
     const intervalId = window.setInterval(() => {
       void loadServerStatus(true)
       void loadDockerContainers()
+      void loadPorts()
     }, MONITORING_REFRESH_INTERVAL)
 
     return () => {
       window.clearTimeout(initialLoadId)
       window.clearInterval(intervalId)
     }
-  }, [currentUser, loadDockerContainers, loadServerStatus])
+  }, [
+    currentUser,
+    loadDockerContainers,
+    loadPorts,
+    loadServerStatus,
+  ])
 
   const handleLogin = async (
     username: string,
@@ -159,6 +199,9 @@ function App() {
     setDockerContainers([])
     setDockerError(null)
     setIsDockerLoading(true)
+    setPorts([])
+    setPortError(null)
+    setIsPortLoading(true)
   }
 
   if (currentUser === undefined) {
@@ -214,6 +257,7 @@ function App() {
           onRefresh={() => {
             void loadServerStatus(true)
             void loadDockerContainers()
+            void loadPorts()
           }}
           serverStatus={serverStatus}
         />
@@ -222,6 +266,12 @@ function App() {
           containers={dockerContainers}
           errorMessage={dockerError}
           isLoading={isDockerLoading}
+        />
+
+        <PortInventoryPanel
+          errorMessage={portError}
+          isLoading={isPortLoading}
+          ports={ports}
         />
       </div>
     </main>
