@@ -29,6 +29,9 @@ public class SynologySnmpConfig {
         SecurityProtocols securityProtocols =
                 SecurityProtocols.getInstance();
         securityProtocols.addDefaultProtocols();
+        securityProtocols.addAuthenticationProtocol(
+                new AuthSHA()
+        );
 
         USM usm = new USM(
                 securityProtocols,
