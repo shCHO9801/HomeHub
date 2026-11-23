@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
@@ -78,6 +79,14 @@ function emptyResponse(status = 204): Response {
   } as Response
 }
 
+function renderApp(path = '/') {
+  return render(
+    <MemoryRouter initialEntries={[path]}>
+      <App />
+    </MemoryRouter>,
+  )
+}
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
@@ -88,7 +97,7 @@ describe('App 인증 흐름', () => {
       () => new Promise<Response>(() => {}),
     )
 
-    render(<App />)
+    renderApp()
 
     expect(
       screen.getByText('로그인 상태 확인 중…'),
@@ -100,7 +109,7 @@ describe('App 인증 흐름', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(jsonResponse({}, 401))
 
-    render(<App />)
+    renderApp()
 
     expect(
       await screen.findByRole('heading', {
@@ -151,7 +160,7 @@ describe('App 인증 흐름', () => {
         return jsonResponse(serverStatus)
       })
 
-    render(<App />)
+    renderApp()
 
     fireEvent.change(
       await screen.findByLabelText('사용자명'),
@@ -165,8 +174,8 @@ describe('App 인증 흐름', () => {
     )
 
     expect(
-      await screen.findByText('sunghyun-admin'),
-    ).toBeInTheDocument()
+      await screen.findAllByText('sunghyun-admin'),
+    ).toHaveLength(2)
     expect(screen.getByText('ADMIN')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith(
       '/api/auth/login',
@@ -199,7 +208,7 @@ describe('App 인증 흐름', () => {
       },
     )
 
-    render(<App />)
+    renderApp()
 
     fireEvent.change(
       await screen.findByLabelText('사용자명'),
@@ -248,13 +257,15 @@ describe('App 인증 흐름', () => {
         return jsonResponse(serverStatus)
       })
 
-    render(<App />)
+    renderApp()
 
-    fireEvent.click(
-      await screen.findByRole('button', {
-        name: '로그아웃',
-      }),
+    const logoutButtons = await screen.findAllByRole(
+      'button',
+      { name: '로그아웃' },
     )
+
+    expect(logoutButtons).toHaveLength(2)
+    fireEvent.click(logoutButtons[0])
 
     expect(
       await screen.findByLabelText('사용자명'),
@@ -291,7 +302,7 @@ describe('App 서버 상태', () => {
       },
     )
 
-    render(<App />)
+    renderApp()
 
     expect(
       await screen.findByText('서버 온라인'),
@@ -309,7 +320,7 @@ describe('App 서버 상태', () => {
       },
     )
 
-    render(<App />)
+    renderApp()
 
     expect(
       await screen.findByText(
@@ -341,7 +352,7 @@ describe('App Docker 모니터링', () => {
         return jsonResponse(serverStatus)
       })
 
-    render(<App />)
+    renderApp('/docker')
 
     expect(
       await screen.findByText('homehub-backend'),
@@ -377,14 +388,16 @@ describe('App Docker 모니터링', () => {
       },
     )
 
-    render(<App />)
+    renderApp('/docker')
 
     expect(
       await screen.findByText(
         'Docker 컨테이너 정보를 불러오지 못했습니다.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('서버 온라인')).toBeInTheDocument()
+    expect(
+      screen.queryByText('서버 온라인'),
+    ).not.toBeInTheDocument()
   })
 })
 
@@ -410,7 +423,7 @@ describe('App 포트 현황', () => {
         return jsonResponse(serverStatus)
       })
 
-    render(<App />)
+    renderApp('/ports')
 
     expect(
       await screen.findByRole('heading', {
@@ -448,7 +461,7 @@ describe('App 포트 현황', () => {
       },
     )
 
-    render(<App />)
+    renderApp('/ports')
 
     await screen.findByText('sshd')
 
@@ -481,13 +494,15 @@ describe('App 포트 현황', () => {
       },
     )
 
-    render(<App />)
+    renderApp('/ports')
 
     expect(
       await screen.findByText(
         '사용 중인 포트 정보를 불러오지 못했습니다.',
       ),
     ).toBeInTheDocument()
-    expect(screen.getByText('서버 온라인')).toBeInTheDocument()
+    expect(
+      screen.queryByText('서버 온라인'),
+    ).not.toBeInTheDocument()
   })
 })
