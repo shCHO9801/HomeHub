@@ -28,3 +28,13 @@ homehub:
     base-url: ${SYNOLOGY_BASE_URL:http://localhost}
     connect-timeout: ${SYNOLOGY_CONNECT_TIMEOUT:2s}
     read-timeout: ${SYNOLOGY_READ_TIMEOUT:5s}
+    snmp:
+      enabled: ${SYNOLOGY_SNMP_ENABLED:false}
+      host: ${SYNOLOGY_SNMP_HOST:localhost}
+      port: ${SYNOLOGY_SNMP_PORT:161}
+      username: ${SYNOLOGY_SNMP_USERNAME:}
+      auth-password: ${SYNOLOGY_SNMP_AUTH_PASSWORD:}
+      priv-password: ${SYNOLOGY_SNMP_PRIV_PASSWORD:}
+      timeout: ${SYNOLOGY_SNMP_TIMEOUT:3s}
+      retries: ${SYNOLOGY_SNMP_RETRIES:1}
+      cache-ttl: ${SYNOLOGY_SNMP_CACHE_TTL:5m}

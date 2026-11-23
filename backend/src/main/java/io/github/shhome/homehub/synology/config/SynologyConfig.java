@@ -10,7 +10,10 @@ import org.springframework.web.client.RestClient;
 import java.net.http.HttpClient;
 
 @Configuration
-@EnableConfigurationProperties(SynologyProperties.class)
+@EnableConfigurationProperties({
+        SynologyProperties.class,
+        SynologySnmpProperties.class
+})
 public class SynologyConfig {
 
     @Bean
