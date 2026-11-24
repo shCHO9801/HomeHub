@@ -10,6 +10,7 @@ import {getDockerContainers, getPorts, getServerStatus,} from './monitoring/api'
 
 import {Navigate, Route, Routes} from 'react-router'
 import DashboardLayout from './layout/DashboardLayout'
+import NasStoragePage from './synology/NasStoragePage'
 
 const MONITORING_REFRESH_INTERVAL = 10_000
 
@@ -252,6 +253,11 @@ function App() {
                             ports={ports}
                         />
                     }
+                />
+
+                <Route
+                    path="nas"
+                    element={<NasStoragePage/>}
                 />
 
                 <Route
