@@ -3,6 +3,7 @@ import {Navigate, Route, Routes} from 'react-router'
 import type {CurrentUser} from './auth/api'
 import DashboardLayout from './layout/DashboardLayout'
 import DockerContainerPanel from './monitoring/DockerContainerPanel'
+import MonitoringAlertPanel from './monitoring/MonitoringAlertPanel'
 import MonitoringHistoryPanel from './monitoring/MonitoringHistoryPanel'
 import PortInventoryPanel from './monitoring/PortInventoryPanel'
 import ServerMonitoringPanel from './monitoring/ServerMonitoringPanel'
@@ -158,6 +159,8 @@ function DashboardApp({
                     index
                     element={
                         <div className="space-y-6">
+                            <MonitoringAlertPanel/>
+
                             <ServerMonitoringPanel
                                 errorMessage={monitoringError}
                                 isLoading={isMonitoringLoading}
