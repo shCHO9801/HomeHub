@@ -64,6 +64,34 @@ const ports = [
   },
 ]
 
+const synologyStorage = {
+  status: 'AVAILABLE',
+  stale: false,
+  volumes: [
+    {
+      name: 'Volume 1',
+      path: '/volume1',
+      totalBytes: 3_829_365_997_568,
+      usedBytes: 784_113_881_088,
+      availableBytes: 3_045_252_116_480,
+      usagePercent: 20.48,
+    },
+  ],
+  storageItems: [
+    {
+      name: 'Volume 1',
+      type: 'VOLUME',
+      health: 'HEALTHY',
+    },
+    {
+      name: 'Storage Pool 1',
+      type: 'STORAGE_POOL',
+      health: 'HEALTHY',
+    },
+  ],
+  collectedAt: '2026-11-23T14:47:03Z',
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -504,5 +532,133 @@ describe('App 포트 현황', () => {
     expect(
       screen.queryByText('서버 온라인'),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('App Synology NAS 저장공간', () => {
+  it('인증된 사용자에게 NAS 저장공간과 건강 상태를 표시한다', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/synology/storage') {
+          return jsonResponse(synologyStorage)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      })
+
+    renderApp('/nas')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '저장공간 정상',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Volume 1')).toHaveLength(2)
+    expect(screen.getByText('20.5%')).toBeInTheDocument()
+    expect(screen.getByText('Storage Pool 1')).toBeInTheDocument()
+    expect(screen.getAllByText('정상')).toHaveLength(2)
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/synology/storage',
+      { credentials: 'include' },
+    )
+  })
+
+  it('NAS 수집에 실패하면 상태 확인 불가를 표시한다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/synology/storage') {
+          return jsonResponse({
+            status: 'UNAVAILABLE',
+            stale: false,
+            volumes: [],
+            storageItems: [],
+            collectedAt: null,
+          })
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      },
+    )
+
+    renderApp('/nas')
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '상태 확인 불가',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'NAS 저장공간 정보를 수집하지 못했습니다.',
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it('이전 수집 데이터를 표시할 때 stale 상태를 안내한다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/synology/storage') {
+          return jsonResponse({
+            ...synologyStorage,
+            status: 'UNAVAILABLE',
+            stale: true,
+          })
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      },
+    )
+
+    renderApp('/nas')
+
+    expect(
+      await screen.findByText(
+        '현재 수집에 실패해 마지막 정상 정보를 표시합니다.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText('20.5%')).toBeInTheDocument()
   })
 })

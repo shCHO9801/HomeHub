@@ -10,6 +10,7 @@ const navigationItems = [
     { path: '/', label: '홈', end: true },
     { path: '/docker', label: 'Docker', end: false },
     { path: '/ports', label: '포트', end: false },
+    { path: '/nas', label: 'NAS', end: false },
 ]
 
 function DashboardLayout({
@@ -97,7 +98,7 @@ function DashboardLayout({
                 </main>
             </div>
 
-            <nav className="fixed inset-x-0 bottom-0 grid grid-cols-3 border-t border-slate-200 bg-white p-2 md:hidden">
+            <nav className="fixed inset-x-0 bottom-0 grid grid-cols-4 border-t border-slate-200 bg-white p-2 md:hidden">
                 {navigationItems.map((item) => (
                     <NavLink
                         className={navigationClassName}

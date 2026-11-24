@@ -55,6 +55,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.flywaydb:flyway-mysql'
 	implementation 'org.springframework.boot:spring-boot-starter-restclient'
+	implementation 'org.snmp4j:snmp4j:3.13.2'
 
 	runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
 
