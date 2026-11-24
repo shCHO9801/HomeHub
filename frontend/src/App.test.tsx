@@ -92,6 +92,21 @@ const synologyStorage = {
   collectedAt: '2026-11-23T14:47:03Z',
 }
 
+const monitoringHistory = [
+  {
+    cpuUsagePercent: 12.5,
+    memoryUsagePercent: 45.5,
+    diskUsagePercent: 20.4,
+    collectedAt: '2026-11-24T00:00:00Z',
+  },
+  {
+    cpuUsagePercent: 18.2,
+    memoryUsagePercent: 47.1,
+    diskUsagePercent: 20.5,
+    collectedAt: '2026-11-24T00:05:00Z',
+  },
+]
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -353,6 +368,83 @@ describe('App 서버 상태', () => {
     expect(
       await screen.findByText(
         '서버 모니터링 정보를 불러오지 못했습니다.',
+      ),
+    ).toBeInTheDocument()
+  })
+})
+
+describe('App 서버 모니터링 이력', () => {
+  it('최근 24시간 서버 자원 사용률 그래프를 표시한다', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation(async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/history?hours=24') {
+          return jsonResponse(monitoringHistory)
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      })
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('img', {
+        name: '최근 24시간 서버 자원 사용률',
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('CPU')).toHaveLength(2)
+    expect(screen.getByText('메모리')).toBeInTheDocument()
+    expect(screen.getByText('디스크')).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/monitoring/history?hours=24',
+      { credentials: 'include' },
+    )
+  })
+
+  it('수집된 이력이 없으면 빈 상태를 표시한다', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      async (input) => {
+        const url = String(input)
+
+        if (url === '/api/auth/me') {
+          return jsonResponse(currentUser)
+        }
+
+        if (url === '/api/monitoring/history?hours=24') {
+          return jsonResponse([])
+        }
+
+        if (url === '/api/monitoring/docker/containers') {
+          return jsonResponse(dockerContainers)
+        }
+
+        if (url === '/api/monitoring/ports') {
+          return jsonResponse(ports)
+        }
+
+        return jsonResponse(serverStatus)
+      },
+    )
+
+    renderApp()
+
+    expect(
+      await screen.findByText(
+        '아직 수집된 서버 모니터링 이력이 없습니다.',
       ),
     ).toBeInTheDocument()
   })

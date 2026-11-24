@@ -48,6 +48,42 @@ export type PortStatusResponse = {
     processName: string | null
 }
 
+export type MonitoringHistoryResponse = {
+    cpuUsagePercent: number
+    memoryUsagePercent: number
+    diskUsagePercent: number
+    collectedAt: string
+}
+
+export async function getMonitoringHistory(
+    hours = 24,
+): Promise<MonitoringHistoryResponse[]> {
+    try {
+        const response = await fetch(
+            `/api/monitoring/history?hours=${hours}`,
+            {
+                credentials: 'include',
+            },
+        )
+
+        if (!response.ok) {
+            throw new Error()
+        }
+
+        const history = await response.json()
+
+        if (!Array.isArray(history)) {
+            throw new Error()
+        }
+
+        return history as MonitoringHistoryResponse[]
+    } catch {
+        throw new Error(
+            '서버 모니터링 이력을 불러오지 못했습니다.',
+        )
+    }
+}
+
 export async function getPorts(): Promise<PortStatusResponse[]> {
     try {
         const response = await fetch('/api/monitoring/ports', {
