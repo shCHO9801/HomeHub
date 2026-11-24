@@ -55,6 +55,61 @@ export type MonitoringHistoryResponse = {
     collectedAt: string
 }
 
+export type MonitoringAlertStatus =
+    | 'NORMAL'
+    | 'WARNING'
+    | 'CRITICAL'
+
+export type MonitoringAlertSource =
+    | 'SERVER'
+    | 'DOCKER'
+    | 'NAS'
+
+export type MonitoringAlertResponse = {
+    source: MonitoringAlertSource
+    status: MonitoringAlertStatus
+    title: string
+    message: string
+}
+
+export type MonitoringAlertSummaryResponse = {
+    status: MonitoringAlertStatus
+    alerts: MonitoringAlertResponse[]
+    checkedAt: string
+}
+
+export async function getMonitoringAlerts():
+    Promise<MonitoringAlertSummaryResponse> {
+    try {
+        const response = await fetch(
+            '/api/monitoring/alerts',
+            {
+                credentials: 'include',
+            },
+        )
+
+        if (!response.ok) {
+            throw new Error()
+        }
+
+        const summary = await response.json()
+
+        if (
+            typeof summary !== 'object'
+            || summary === null
+            || !Array.isArray(summary.alerts)
+        ) {
+            throw new Error()
+        }
+
+        return summary as MonitoringAlertSummaryResponse
+    } catch {
+        throw new Error(
+            '모니터링 경고를 불러오지 못했습니다.',
+        )
+    }
+}
+
 export async function getMonitoringHistory(
     hours = 24,
 ): Promise<MonitoringHistoryResponse[]> {

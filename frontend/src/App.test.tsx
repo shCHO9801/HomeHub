@@ -107,6 +107,12 @@ const monitoringHistory = [
   },
 ]
 
+const normalAlertSummary = {
+  status: 'NORMAL',
+  alerts: [],
+  checkedAt: '2026-11-24T08:00:00Z',
+}
+
 function jsonResponse(body: unknown, status = 200): Response {
   return {
     ok: status >= 200 && status < 300,
@@ -128,6 +134,38 @@ function renderApp(path = '/') {
       <App />
     </MemoryRouter>,
   )
+}
+
+function mockAuthenticatedDashboard(
+  alertSummary: unknown,
+) {
+  return vi
+    .spyOn(globalThis, 'fetch')
+    .mockImplementation(async (input) => {
+      const url = String(input)
+
+      if (url === '/api/auth/me') {
+        return jsonResponse(currentUser)
+      }
+
+      if (url === '/api/monitoring/alerts') {
+        return jsonResponse(alertSummary)
+      }
+
+      if (url === '/api/monitoring/history?hours=24') {
+        return jsonResponse([])
+      }
+
+      if (url === '/api/monitoring/docker/containers') {
+        return jsonResponse(dockerContainers)
+      }
+
+      if (url === '/api/monitoring/ports') {
+        return jsonResponse(ports)
+      }
+
+      return jsonResponse(serverStatus)
+    })
 }
 
 afterEach(() => {
@@ -370,6 +408,85 @@ describe('App 서버 상태', () => {
         '서버 모니터링 정보를 불러오지 못했습니다.',
       ),
     ).toBeInTheDocument()
+  })
+})
+
+describe('App 모니터링 경고', () => {
+  it('경고가 없으면 현재 상태가 정상임을 표시한다', async () => {
+    const fetchMock = mockAuthenticatedDashboard(
+      normalAlertSummary,
+    )
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '현재 경고 없음',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        '서버, Docker, NAS 상태가 정상입니다.',
+      ),
+    ).toBeInTheDocument()
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/monitoring/alerts',
+      { credentials: 'include' },
+    )
+  })
+
+  it('주의 경고가 있으면 확인이 필요한 항목을 표시한다', async () => {
+    mockAuthenticatedDashboard({
+      status: 'WARNING',
+      alerts: [
+        {
+          source: 'SERVER',
+          status: 'WARNING',
+          title: '디스크 사용률 경고',
+          message: '디스크 사용률이 90.0%입니다.',
+        },
+      ],
+      checkedAt: '2026-11-24T08:00:00Z',
+    })
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '확인이 필요한 항목이 있습니다',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('디스크 사용률 경고'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('서버')).toBeInTheDocument()
+  })
+
+  it('위험 경고가 있으면 즉시 확인이 필요함을 표시한다', async () => {
+    mockAuthenticatedDashboard({
+      status: 'CRITICAL',
+      alerts: [
+        {
+          source: 'DOCKER',
+          status: 'CRITICAL',
+          title: 'Docker 컨테이너 비정상',
+          message: 'backend 컨테이너가 비정상 상태입니다.',
+        },
+      ],
+      checkedAt: '2026-11-24T08:00:00Z',
+    })
+
+    renderApp()
+
+    expect(
+      await screen.findByRole('heading', {
+        name: '즉시 확인이 필요합니다',
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('Docker 컨테이너 비정상'),
+    ).toBeInTheDocument()
+    expect(screen.getByText('CRITICAL')).toBeInTheDocument()
   })
 })
 
